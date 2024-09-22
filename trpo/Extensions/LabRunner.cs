@@ -6,6 +6,9 @@ namespace trpo.Extensions
 {
     public static class LabRunner
     {
+        private static readonly object _lockObject = new();
+        private static bool _isThread1Started = false;
+
         public static void RunFirst()
         {
             var guestBook = new GuestBook();
@@ -54,6 +57,68 @@ namespace trpo.Extensions
             {
                 double result = Calculator.Calculate(i);
                 Console.WriteLine($"Результат обчислення для x = {i} : {result}");
+            }
+        }
+
+        public static void RunThird()
+        {
+            var timer = new Timer();
+
+            var thread1 = new Thread(() => ComputeWithThread1(1.5, timer, 10));
+            var thread2 = new Thread(() => ComputeWithThread2(6.5, timer, 10));
+
+            timer.Start();
+
+            thread1.Start();
+            thread2.Start();
+
+            thread1.Join();
+            thread2.Join();
+
+            timer.Stop();
+
+            Console.WriteLine($"Час виконання: {timer.ElapsedMilliseconds} мс");
+        }
+
+        static void ComputeWithThread1(double x, Timer timer, int iterations)
+        {
+            for (int i = 0; i < iterations; i++)
+            {
+                double result = Calculator.Calculate(i);
+                Console.WriteLine($"Результат обчислення для потоку 1, x = {i} : {result}");
+
+                if (i == 0)
+                {
+                    lock (_lockObject)
+                    {
+                        _isThread1Started = true;
+                        Monitor.PulseAll(_lockObject);
+                    }
+
+                    Thread.Sleep(3200);
+                }
+
+                Thread.Sleep(500);
+            }
+        }
+
+        // Потік 2
+        static void ComputeWithThread2(double x, Timer timer, int iterations)
+        {
+            lock (_lockObject)
+            {
+                while (!_isThread1Started)
+                {
+                    Monitor.Wait(_lockObject);
+                }
+            }
+
+            for (int i = 0; i < iterations; i++)
+            {
+                double result = Calculator.Calculate(i);
+                Console.WriteLine($"Результат обчислення для потоку 2, x = {i} : {result}");
+
+                Thread.Sleep(500);
             }
         }
     }

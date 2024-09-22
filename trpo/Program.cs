@@ -14,7 +14,10 @@ namespace trpo
             //LabRunner.RunFirst();
 
             // 2
-            LabRunner.RunSecond();
+            //LabRunner.RunSecond();
+
+            // 3
+            LabRunner.RunThird();
         }
     }
 }
